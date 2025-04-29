@@ -41,7 +41,7 @@
   // Fetch gallery images
   const fetchImages = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/gallery')
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/gallery`);
       images.value = res.data
     } catch (error) {
       console.error('Error fetching gallery images:', error)
