@@ -1,8 +1,8 @@
 <template>
   <div class="page gallery">
-    <h2>📸 Restaurant Gallery</h2>
+    <h2>Gallery</h2>
 
-    <button @click="showForm = true" class="toggle-btn">➕ Add Image</button>
+    <button @click="showForm = true" class="toggle-btn">Add Image</button>
 
     <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
       <form @submit.prevent="uploadImage" class="modal-form">
@@ -110,11 +110,13 @@ const uploadImage = async () => {
 }
 
 const deleteImage = async (id) => {
-  const password = prompt('Enter admin password:')
-  if (!password) return
+  if (!adminPassword.value) {
+    alert('Please enter admin password first.')
+    return
+  }
   try {
     await axios.delete(`${import.meta.env.VITE_API_URL}/api/gallery/${id}`, {
-      headers: { Authorization: password }
+      headers: { Authorization: adminPassword.value }
     })
     fetchImages()
   } catch (err) {
