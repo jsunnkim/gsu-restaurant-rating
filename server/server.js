@@ -37,7 +37,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'gsu_gallery',
-    allowed_formats: ['jpg', 'jpeg', 'png']
+    allowed_formats: ['jpg', 'jpeg', 'png' , 'webp']
   }
 })
 const upload = multer({ storage })
@@ -71,8 +71,8 @@ app.delete('/api/gallery/:id', async (req, res) => {
   const image = await Image.findById(req.params.id)
   if (!image) return res.status(404).json({ message: 'Not found' })
 
-  const inputPassword = req.headers.authorization
-  const adminPassword = process.env.ADMIN_PASSWORD
+  const inputPassword = (req.headers.authorization || '').trim()
+  const adminPassword = (process.env.ADMIN_PASSWORD || '').trim()
 
   if (inputPassword !== image.password && inputPassword !== adminPassword) {
     return res.status(403).json({ message: 'Wrong password' })
@@ -104,7 +104,7 @@ app.get('/api/post', async (req, res) => {
 })
 
 app.delete('/api/post/:id', async (req, res) => {
-  if (req.headers.authorization !== process.env.ADMIN_PASSWORD) {
+  if ((req.headers.authorization || '').trim() !== (process.env.ADMIN_PASSWORD || '').trim()) {
     return res.status(403).json({ message: 'Forbidden' })
   }
   const post = await Post.findById(req.params.id)
