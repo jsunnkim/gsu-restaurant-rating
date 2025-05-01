@@ -42,10 +42,12 @@ const storage = new CloudinaryStorage({
 })
 const upload = multer({ storage })
 
+// 기본 라우트
 app.get('/', (req, res) => {
   res.send('🚀 GSU Restaurant Rating Backend Running')
 })
 
+// 이미지 업로드
 app.post('/api/upload', upload.single('image'), async (req, res) => {
   try {
     const newImage = new Image({
@@ -62,11 +64,13 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
   }
 })
 
+// 이미지 목록 조회
 app.get('/api/gallery', async (req, res) => {
   const images = await Image.find().sort({ createdAt: -1 })
   res.json(images)
 })
 
+// 이미지 삭제
 app.delete('/api/gallery/:id', async (req, res) => {
   const image = await Image.findById(req.params.id)
   if (!image) return res.status(404).json({ message: 'Not found' })
@@ -84,31 +88,48 @@ app.delete('/api/gallery/:id', async (req, res) => {
   res.json({ message: 'Image deleted' })
 })
 
+// 포스트 업로드
 app.post('/api/post', upload.single('image'), async (req, res) => {
-  const { name, address, rating, review, author } = req.body
-  const post = new Post({
-    name,
-    address,
-    rating: parseFloat(rating),
-    review,
-    imageUrl: req.file.path,
-    author
-  })
-  await post.save()
-  res.status(201).json(post)
+  try {
+    const { name, address, rating, review, author } = req.body
+    const password = req.body.password || req.headers.authorization
+
+    const post = new Post({
+      name,
+      address,
+      rating: parseFloat(rating),
+      review,
+      imageUrl: req.file.path,
+      author,
+      password
+    })
+
+    await post.save()
+    res.status(201).json(post)
+  } catch (error) {
+    console.error('❌ Post upload failed:', error)
+    res.status(500).json({ message: 'Post upload failed' })
+  }
 })
 
+// 포스트 조회
 app.get('/api/post', async (req, res) => {
   const posts = await Post.find().sort({ createdAt: -1 })
   res.json(posts)
 })
 
+// 포스트 삭제
 app.delete('/api/post/:id', async (req, res) => {
-  if ((req.headers.authorization || '').trim() !== (process.env.ADMIN_PASSWORD || '').trim()) {
-    return res.status(403).json({ message: 'Forbidden' })
-  }
   const post = await Post.findById(req.params.id)
   if (!post) return res.status(404).json({ message: 'Not found' })
+
+  const inputPassword = (req.headers.authorization || '').trim()
+  const adminPassword = (process.env.ADMIN_PASSWORD || '').trim()
+
+  if (inputPassword !== post.password && inputPassword !== adminPassword) {
+    return res.status(403).json({ message: 'Wrong password' })
+  }
+
   const publicId = post.imageUrl.split('/').pop().split('.')[0]
   await cloudinary.uploader.destroy(`gsu_gallery/${publicId}`)
   await post.deleteOne()
