@@ -1,14 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
+const cors = require('cors' );
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 // === Mongoose Models ===
 const Image = require('./models/Image');
-
+const Post = require('./models/Post'); // ✅ 새로 추가
 const RestaurantSchema = new mongoose.Schema({
   name: String,
   address: String,
@@ -114,6 +114,42 @@ app.post('/api/restaurant', async (req, res) => {
   }
 });
 
+// ✅ Restaurant Post - Upload
+app.post('/api/post', upload.single('image'), async (req, res) => {
+  try {
+    const { name, address, rating, review } = req.body;
+
+    if (!req.file || !name || !address || !review) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const post = new Post({
+      name,
+      address,
+      rating: parseFloat(rating),
+      review,
+      imageUrl: req.file.path
+    });
+
+    await post.save();
+    res.status(201).json(post);
+  } catch (err) {
+    console.error('❌ Error uploading post:', err);
+    res.status(500).json({ message: 'Post upload failed' });
+  }
+});
+
+// ✅ Restaurant Post - List
+app.get('/api/post', async (req, res) => {
+  try {
+    const posts = await Post.find().sort({ createdAt: -1 });
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ message: 'Error loading posts' });
+  }
+});
+
+// Start Server
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
