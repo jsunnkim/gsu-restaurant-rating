@@ -1,6 +1,6 @@
 <template>
   <div class="page gallery">
-    <h2>📸 Restaurant Gallery</h2>
+    <h2>Food Gallery</h2>
 
     <!-- 데이터 없을 때 -->
     <div v-if="images.length === 0">

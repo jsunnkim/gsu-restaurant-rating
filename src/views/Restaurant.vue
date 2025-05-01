@@ -1,6 +1,6 @@
 <template>
   <div class="page restaurant">
-    <h2>🍽️ Restaurant Posts</h2>
+    <h2>Restaurant Posts</h2>
 
     <button @click="showForm = true" class="toggle-btn">➕ Add Post</button>
 
