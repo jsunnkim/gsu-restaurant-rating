@@ -6,17 +6,8 @@ const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// === Mongoose Models ===
 const Image = require('./models/Image');
 const Post = require('./models/Post');
-
-const RestaurantSchema = new mongoose.Schema({
-  name: String,
-  address: String,
-  rating: Number,
-  review: String
-});
-const Restaurant = mongoose.model('Restaurant', RestaurantSchema);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,29 +15,21 @@ const PORT = process.env.PORT || 5000;
 // === CORS 설정 ===
 const corsOptions = {
   origin: [
-    'https://gsu-restaurant-rating.vercel.app',  // ✅ Vercel 도메인
-    'http://localhost:5173',                     // ✅ Vue 개발 서버
-    'http://localhost:5177'                      // ✅ 혹시 다른 포트도 대비
+    'https://gsu-restaurant-rating.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5177',
+    'http://localhost:5175'
   ],
   methods: ['GET', 'POST', 'DELETE'],
   credentials: true
 };
 app.use(cors(corsOptions));
-
-// === 기본 미들웨어 ===
 app.use(express.json());
 
 // === MongoDB 연결 ===
-async function connectDB() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('✅ MongoDB connected');
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
-    process.exit(1);
-  }
-}
-connectDB();
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch(err => { console.error('❌ MongoDB error:', err); process.exit(1); });
 
 // === Cloudinary 설정 ===
 cloudinary.config({
@@ -74,93 +57,70 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
   try {
     const newImage = new Image({
       src: req.file.path,
-      alt: req.body.alt
+      alt: req.body.alt,
+      author: req.body.author
     });
     await newImage.save();
     res.status(201).json(newImage);
   } catch (error) {
-    console.error('Upload error:', error);
     res.status(500).json({ message: 'Upload failed' });
   }
 });
 
-// === 갤러리 이미지 목록 ===
+// === 갤러리 불러오기 ===
 app.get('/api/gallery', async (req, res) => {
-  try {
-    const images = await Image.find();
-    res.json(images);
-  } catch (error) {
-    console.error('Fetch error:', error);
-    res.status(500).json({ message: 'Error fetching gallery' });
-  }
+  const images = await Image.find().sort({ createdAt: -1 });
+  res.json(images);
 });
 
-// === 갤러리 이미지 삭제 ===
+// === 갤러리 삭제 ===
 app.delete('/api/gallery/:id', async (req, res) => {
-  try {
-    const image = await Image.findById(req.params.id);
-    if (!image) return res.status(404).json({ message: 'Image not found' });
-
-    const publicId = image.src.split('/').pop().split('.')[0];
-    await cloudinary.uploader.destroy(`gsu_gallery/${publicId}`);
-    await image.deleteOne();
-    res.json({ message: 'Image deleted successfully' });
-  } catch (error) {
-    console.error('Delete error:', error);
-    res.status(500).json({ message: 'Failed to delete image' });
+  if (req.headers.authorization !== process.env.ADMIN_PASSWORD) {
+    return res.status(403).json({ message: 'Forbidden' });
   }
+  const image = await Image.findById(req.params.id);
+  if (!image) return res.status(404).json({ message: 'Not found' });
+  const publicId = image.src.split('/').pop().split('.')[0];
+  await cloudinary.uploader.destroy(`gsu_gallery/${publicId}`);
+  await image.deleteOne();
+  res.json({ message: 'Image deleted' });
 });
 
-// === 텍스트 레스토랑 등록 ===
-app.post('/api/restaurant', async (req, res) => {
-  try {
-    const { name, address, rating, review } = req.body;
-    const newRestaurant = new Restaurant({ name, address, rating, review });
-    await newRestaurant.save();
-    res.status(201).json(newRestaurant);
-  } catch (error) {
-    console.error('Restaurant error:', error);
-    res.status(500).json({ message: 'Failed to add restaurant' });
-  }
-});
-
-// === 레스토랑 포스트 업로드 (사진 + 리뷰) ===
+// === 리뷰 업로드 ===
 app.post('/api/post', upload.single('image'), async (req, res) => {
-  try {
-    const { name, address, rating, review } = req.body;
-
-    if (!req.file || !name || !address || !review) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    const post = new Post({
-      name,
-      address,
-      rating: parseFloat(rating),
-      review,
-      imageUrl: req.file.path
-    });
-
-    await post.save();
-    res.status(201).json(post);
-  } catch (err) {
-    console.error('❌ Error uploading post:', err);
-    res.status(500).json({ message: 'Post upload failed' });
-  }
+  const { name, address, rating, review, author } = req.body;
+  const post = new Post({
+    name,
+    address,
+    rating: parseFloat(rating),
+    review,
+    imageUrl: req.file.path,
+    author
+  });
+  await post.save();
+  res.status(201).json(post);
 });
 
-// === 레스토랑 포스트 리스트 ===
+// === 리뷰 리스트 ===
 app.get('/api/post', async (req, res) => {
-  try {
-    const posts = await Post.find().sort({ createdAt: -1 });
-    res.json(posts);
-  } catch (err) {
-    console.error('❌ Error loading posts:', err);
-    res.status(500).json({ message: 'Error loading posts' });
-  }
+  const posts = await Post.find().sort({ createdAt: -1 });
+  res.json(posts);
 });
 
-// === 서버 실행 ===
+// === 리뷰 삭제 ===
+app.delete('/api/post/:id', async (req, res) => {
+  if (req.headers.authorization !== process.env.ADMIN_PASSWORD) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: 'Not found' });
+  const publicId = post.imageUrl.split('/').pop().split('.')[0];
+  await cloudinary.uploader.destroy(`gsu_gallery/${publicId}`);
+  await post.deleteOne();
+  res.json({ message: 'Post deleted' });
+});
+
+// === 서버 시작 ===
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });

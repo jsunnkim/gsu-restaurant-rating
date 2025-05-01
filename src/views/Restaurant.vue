@@ -2,20 +2,26 @@
   <div class="page restaurant">
     <h2>🍽️ Restaurant Posts</h2>
 
-    <button @click="showForm = !showForm" class="toggle-btn">
-      {{ showForm ? 'Cancel' : '➕ Add Post' }}
-    </button>
+    <button @click="showForm = true" class="toggle-btn">➕ Add Post</button>
 
-    <!-- 업로드 폼 -->
-    <form v-if="showForm" @submit.prevent="submitPost" class="upload-form">
-      <input type="file" @change="handleFile" accept="image/*" required />
-      <input v-model="name" placeholder="Restaurant Name" required />
-      <input v-model="address" placeholder="Address" required />
-      <input v-model="rating" type="number" min="0" max="5" step="0.1" placeholder="Rating" required />
-      <textarea v-model="review" placeholder="Write your review..." required></textarea>
-      <button type="submit">Post</button>
-      <p v-if="uploadStatus">{{ uploadStatus }}</p>
-    </form>
+    <!-- 모달 작성 폼 -->
+    <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
+      <form @submit.prevent="submitPost" class="modal-form">
+        <h3>📝 Write a Restaurant Review</h3>
+        <input type="file" @change="handleFile" accept="image/*" required />
+        <input v-model="name" placeholder="Restaurant Name" required />
+        <input v-model="address" placeholder="Address" required />
+        <input v-model="rating" type="number" min="0" max="5" step="0.1" placeholder="Rating" required />
+        <textarea v-model="review" placeholder="Write your review..." required></textarea>
+        <input v-model="author" placeholder="Author" required />
+
+        <div class="modal-buttons">
+          <button type="submit">Post</button>
+          <button type="button" @click="showForm = false" class="cancel">Cancel</button>
+        </div>
+        <p v-if="uploadStatus">{{ uploadStatus }}</p>
+      </form>
+    </div>
 
     <!-- 포스트 리스트 -->
     <div class="post-grid">
@@ -26,6 +32,8 @@
           <p class="address">📍 {{ post.address }}</p>
           <p>⭐ {{ post.rating }}</p>
           <p>{{ post.review }}</p>
+          <p>👤 {{ post.author }}</p>
+          <button @click="deletePost(post._id)">Delete</button>
         </div>
       </div>
     </div>
@@ -41,16 +49,15 @@ const name = ref('')
 const address = ref('')
 const rating = ref('')
 const review = ref('')
+const author = ref('')
 const selectedFile = ref(null)
 const uploadStatus = ref('')
 const showForm = ref(false)
 
-// 파일 선택 핸들러
 const handleFile = (e) => {
   selectedFile.value = e.target.files[0]
 }
 
-// 포스트 전송
 const submitPost = async () => {
   const formData = new FormData()
   formData.append('image', selectedFile.value)
@@ -58,6 +65,7 @@ const submitPost = async () => {
   formData.append('address', address.value)
   formData.append('rating', rating.value)
   formData.append('review', review.value)
+  formData.append('author', author.value)
 
   try {
     await axios.post(`${import.meta.env.VITE_API_URL}/api/post`, formData, {
@@ -68,6 +76,7 @@ const submitPost = async () => {
     address.value = ''
     rating.value = ''
     review.value = ''
+    author.value = ''
     selectedFile.value = null
     document.querySelector('input[type="file"]').value = ''
     showForm.value = false
@@ -78,13 +87,26 @@ const submitPost = async () => {
   }
 }
 
-// 포스트 불러오기
 const fetchPosts = async () => {
   try {
     const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/post`)
     posts.value = res.data
   } catch (err) {
     console.error('❌ Error loading posts:', err)
+  }
+}
+
+const deletePost = async (id) => {
+  const password = prompt("Enter admin password:")
+  if (!password) return
+
+  try {
+    await axios.delete(`${import.meta.env.VITE_API_URL}/api/post/${id}`, {
+      headers: { Authorization: password }
+    })
+    fetchPosts()
+  } catch (err) {
+    alert('❌ Delete failed')
   }
 }
 
@@ -109,40 +131,6 @@ onMounted(fetchPosts)
 }
 .toggle-btn:hover {
   background-color: #0c74d4;
-}
-
-.upload-form {
-  max-width: 450px;
-  margin: 0 auto 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.upload-form input,
-.upload-form textarea {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-}
-
-.upload-form button {
-  padding: 10px;
-  font-weight: bold;
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.upload-form button:hover {
-  background-color: #059669;
-}
-
-.upload-form p {
-  margin-top: 8px;
-  font-weight: bold;
 }
 
 .post-grid {
@@ -175,5 +163,61 @@ onMounted(fetchPosts)
   color: #64748b;
   font-size: 0.9rem;
   margin-bottom: 6px;
+}
+
+/* 모달 관련 스타일 */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-form {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.modal-form input,
+.modal-form textarea {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-buttons button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.modal-buttons button[type="submit"] {
+  background-color: #10b981;
+  color: white;
+}
+
+.cancel {
+  background-color: #64748b;
+  color: white;
 }
 </style>
