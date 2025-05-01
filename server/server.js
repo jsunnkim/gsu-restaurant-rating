@@ -1,4 +1,3 @@
-// === server.js ===
 require('dotenv').config()
 const express = require('express')
 const mongoose = require('mongoose')
@@ -50,16 +49,14 @@ app.get('/', (req, res) => {
   res.send('🚀 GSU Restaurant Rating Backend Running')
 })
 
-// === 이미지 업로드 (인증 필요) ===
+// === 이미지 업로드 (비밀번호 저장 방식) ===
 app.post('/api/upload', upload.single('image'), async (req, res) => {
-  if (req.headers.authorization !== process.env.ADMIN_PASSWORD) {
-    return res.status(403).json({ message: 'Forbidden' })
-  }
   try {
     const newImage = new Image({
       src: req.file.path,
       alt: req.body.alt,
-      author: req.body.author
+      author: req.body.author,
+      password: req.headers.authorization  // 사용자가 설정한 비밀번호 저장
     })
     await newImage.save()
     res.status(201).json(newImage)
@@ -75,13 +72,14 @@ app.get('/api/gallery', async (req, res) => {
   res.json(images)
 })
 
-// === 이미지 삭제 (인증 필요) ===
+// === 이미지 삭제 (사용자 비밀번호 기반) ===
 app.delete('/api/gallery/:id', async (req, res) => {
-  if (req.headers.authorization !== process.env.ADMIN_PASSWORD) {
-    return res.status(403).json({ message: 'Forbidden' })
-  }
   const image = await Image.findById(req.params.id)
   if (!image) return res.status(404).json({ message: 'Not found' })
+
+  if (req.headers.authorization !== image.password) {
+    return res.status(403).json({ message: 'Wrong password' })
+  }
 
   const publicId = image.src.split('/').pop().split('.')[0]
   await cloudinary.uploader.destroy(`gsu_gallery/${publicId}`)
@@ -110,7 +108,7 @@ app.get('/api/post', async (req, res) => {
   res.json(posts)
 })
 
-// === 포스트 삭제 (인증 필요) ===
+// === 포스트 삭제 (관리자만) ===
 app.delete('/api/post/:id', async (req, res) => {
   if (req.headers.authorization !== process.env.ADMIN_PASSWORD) {
     return res.status(403).json({ message: 'Forbidden' })
