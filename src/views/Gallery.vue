@@ -1,6 +1,23 @@
 <template>
   <div class="page gallery">
-    <h2>Gallery</h2>
+    <h2>📸 Restaurant Gallery</h2>
+
+    <button @click="showForm = true" class="toggle-btn">➕ Add Image</button>
+
+    <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
+      <form @submit.prevent="uploadImage" class="modal-form">
+        <h3>📤 Upload New Image</h3>
+        <input type="file" @change="handleFileChange" required />
+        <input type="text" v-model="altText" placeholder="Image description" required />
+        <input type="text" v-model="author" placeholder="Author" required />
+        <input type="password" v-model="adminPassword" placeholder="Admin Password" required />
+        <div class="modal-buttons">
+          <button type="submit">Upload</button>
+          <button type="button" @click="showForm = false" class="cancel">Cancel</button>
+        </div>
+        <p v-if="uploadStatus">{{ uploadStatus }}</p>
+      </form>
+    </div>
 
     <div v-if="images.length === 0">
       <p class="empty-message">No images yet. Be the first to upload!</p>
@@ -26,7 +43,6 @@
       </div>
     </div>
 
-    <!-- 모달 -->
     <div v-if="modalOpen" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <img :src="selectedImageSrc" :alt="selectedImageAlt" class="modal-img" />
@@ -46,7 +62,13 @@ const modalOpen = ref(false)
 const selectedImageSrc = ref('')
 const selectedImageAlt = ref('')
 
-// 이미지 불러오기
+const showForm = ref(false)
+const selectedFile = ref(null)
+const altText = ref('')
+const author = ref('')
+const adminPassword = ref('')
+const uploadStatus = ref('')
+
 const fetchImages = async () => {
   images.value = []
   try {
@@ -57,7 +79,36 @@ const fetchImages = async () => {
   }
 }
 
-// 삭제 요청
+const handleFileChange = (e) => {
+  selectedFile.value = e.target.files[0]
+}
+
+const uploadImage = async () => {
+  const formData = new FormData()
+  formData.append('image', selectedFile.value)
+  formData.append('alt', altText.value)
+  formData.append('author', author.value)
+
+  try {
+    await axios.post(`${import.meta.env.VITE_API_URL}/api/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: adminPassword.value
+      }
+    })
+    uploadStatus.value = '✅ Upload successful!'
+    selectedFile.value = null
+    altText.value = ''
+    author.value = ''
+    adminPassword.value = ''
+    showForm.value = false
+    fetchImages()
+  } catch (error) {
+    uploadStatus.value = '❌ Upload failed.'
+    console.error(error)
+  }
+}
+
 const deleteImage = async (id) => {
   const password = prompt('Enter admin password:')
   if (!password) return
@@ -71,7 +122,6 @@ const deleteImage = async (id) => {
   }
 }
 
-// 모달 열기/닫기
 const openModal = (src, alt) => {
   selectedImageSrc.value = src
   selectedImageAlt.value = alt
@@ -93,10 +143,62 @@ onMounted(fetchImages)
   text-align: center;
 }
 
-.empty-message {
-  margin-top: 40px;
-  font-size: 1.2rem;
-  color: #64748b;
+.toggle-btn {
+  margin-bottom: 20px;
+  padding: 10px 16px;
+  font-weight: bold;
+  background-color: #1e90ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.toggle-btn:hover {
+  background-color: #0c74d4;
+}
+
+.modal-form {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  text-align: left;
+}
+
+.modal-form input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.modal-buttons button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.modal-buttons button[type="submit"] {
+  background-color: #10b981;
+  color: white;
+}
+.cancel {
+  background-color: #64748b;
+  color: white;
+}
+.cancel:hover {
+  background-color: #475569;
 }
 
 .gallery-grid {
@@ -157,7 +259,6 @@ onMounted(fetchImages)
   align-items: center;
   z-index: 1000;
 }
-
 .modal-content {
   background: white;
   padding: 20px;
@@ -166,13 +267,11 @@ onMounted(fetchImages)
   max-height: 90%;
   text-align: center;
 }
-
 .modal-img {
   max-width: 100%;
   max-height: 70vh;
   border-radius: 8px;
 }
-
 .close-button {
   margin-top: 15px;
   padding: 8px 16px;
@@ -186,7 +285,6 @@ onMounted(fetchImages)
 .close-button:hover {
   background-color: #475569;
 }
-
 .animate-fade-in {
   animation: fadeIn 1s ease-out both;
 }

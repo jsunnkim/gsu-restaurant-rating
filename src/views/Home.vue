@@ -11,8 +11,9 @@
           </p>
   
           <div class="buttons">
-            <RouterLink to="/gallery" class="btn">View Gallery</RouterLink>
-            <RouterLink to="/upload" class="btn">Upload Photo</RouterLink>
+            <RouterLink to="/About" class="btn">About Us</RouterLink>
+            <RouterLink to="/Restaurant" class="btn">Restaurant</RouterLink>
+            <RouterLink to="/Gallery" class="btn">Gallery</RouterLink>
             <RouterLink to="/contact" class="btn secondary">Contact Us</RouterLink>
           </div>
         </div>

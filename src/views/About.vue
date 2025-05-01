@@ -4,7 +4,8 @@
         <div class="overlay">
           <h2>About Us</h2>
           <p class="about-text">
-            This platform helps GSU students and visitors discover amazing local restaurants near campus.
+            We are a pair of undergraduate students that eat food like everyone else. And, as a team, realized just how much money we had been spending in pursuit of this.
+            The platform aims to help GSU students and visitors discover amazing local restaurants on and around the GSU campus.
             Built with Vue.js, Node.js, MongoDB, and Cloudinary integration, our mission is to connect the GSU community through food experiences.
           </p>
         </div>

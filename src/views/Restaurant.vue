@@ -1,8 +1,8 @@
 <template>
   <div class="page restaurant">
-    <h2>Restaurant Posts</h2>
+    <h2>Restaurant</h2>
 
-    <button @click="showForm = true" class="toggle-btn">➕ Add Post</button>
+    <button @click="showForm = true" class="toggle-btn">Add Post</button>
 
     <!-- 모달 작성 폼 -->
     <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
@@ -26,15 +26,28 @@
     <!-- 포스트 리스트 -->
     <div class="post-grid">
       <div v-for="post in posts" :key="post._id" class="post-card">
-        <img :src="post.imageUrl" alt="post image" />
+        <img :src="post.imageUrl" alt="post image" @click="openDetail(post)" />
         <div class="post-body">
           <h3>{{ post.name }}</h3>
           <p class="address">📍 {{ post.address }}</p>
           <p>⭐ {{ post.rating }}</p>
           <p>{{ post.review }}</p>
           <p>👤 {{ post.author }}</p>
-          <button @click="deletePost(post._id)">Delete</button>
+          <button class="delete-button" @click="deletePost(post._id)">🗑️ Delete</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 상세보기 모달 -->
+    <div v-if="selectedPost" class="modal-overlay" @click.self="selectedPost = null">
+      <div class="modal-form">
+        <h3>{{ selectedPost.name }}</h3>
+        <img :src="selectedPost.imageUrl" alt="image" class="modal-img" />
+        <p>📍 {{ selectedPost.address }}</p>
+        <p>⭐ {{ selectedPost.rating }}</p>
+        <p>{{ selectedPost.review }}</p>
+        <p>👤 {{ selectedPost.author }}</p>
+        <button class="close-button" @click="selectedPost = null">닫기</button>
       </div>
     </div>
   </div>
@@ -53,6 +66,7 @@ const author = ref('')
 const selectedFile = ref(null)
 const uploadStatus = ref('')
 const showForm = ref(false)
+const selectedPost = ref(null)
 
 const handleFile = (e) => {
   selectedFile.value = e.target.files[0]
@@ -110,6 +124,10 @@ const deletePost = async (id) => {
   }
 }
 
+const openDetail = (post) => {
+  selectedPost.value = post
+}
+
 onMounted(fetchPosts)
 </script>
 
@@ -142,7 +160,7 @@ onMounted(fetchPosts)
 .post-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   text-align: left;
 }
@@ -151,6 +169,7 @@ onMounted(fetchPosts)
   width: 100%;
   height: 180px;
   object-fit: cover;
+  cursor: pointer;
 }
 
 .post-body {
@@ -165,12 +184,11 @@ onMounted(fetchPosts)
   margin-bottom: 6px;
 }
 
-/* 모달 관련 스타일 */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0;
   width: 100vw; height: 100vh;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -186,7 +204,8 @@ onMounted(fetchPosts)
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  text-align: left;
 }
 
 .modal-form input,
@@ -219,5 +238,41 @@ onMounted(fetchPosts)
 .cancel {
   background-color: #64748b;
   color: white;
+}
+
+.delete-button {
+  margin-top: 8px;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.delete-button:hover {
+  background-color: #dc2626;
+}
+
+.modal-img {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.close-button {
+  margin-top: 12px;
+  background-color: #64748b;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.close-button:hover {
+  background-color: #475569;
 }
 </style>
