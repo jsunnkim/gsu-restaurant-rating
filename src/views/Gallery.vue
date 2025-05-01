@@ -1,8 +1,8 @@
 <template>
   <div class="page gallery">
-    <h2>Gallery</h2>
+    <h2>📸 Restaurant Gallery</h2>
 
-    <button @click="showForm = true" class="toggle-btn">Add Image</button>
+    <button @click="showForm = true" class="toggle-btn">➕ Add Image</button>
 
     <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
       <form @submit.prevent="uploadImage" class="modal-form">
@@ -10,7 +10,7 @@
         <input type="file" @change="handleFileChange" required />
         <input type="text" v-model="altText" placeholder="Image description" required />
         <input type="text" v-model="author" placeholder="Author" required />
-        <input type="password" v-model="adminPassword" placeholder="Admin Password" required />
+        <input type="password" v-model="adminPassword" placeholder="Set a password to delete later" required />
         <div class="modal-buttons">
           <button type="submit">Upload</button>
           <button type="button" @click="showForm = false" class="cancel">Cancel</button>
@@ -39,7 +39,7 @@
           {{ image.alt }}<br />
           👤 {{ image.author }}
         </p>
-        <button class="delete-button" @click="deleteImage(image._id)">🗑️ Delete</button>
+        <button class="delete-button" @click="openDeleteModal(image._id)">🗑️ Delete</button>
       </div>
     </div>
 
@@ -48,6 +48,19 @@
         <img :src="selectedImageSrc" :alt="selectedImageAlt" class="modal-img" />
         <p class="caption">{{ selectedImageAlt }}</p>
         <button class="close-button" @click="closeModal">닫기</button>
+      </div>
+    </div>
+
+    <!-- 삭제 모달 -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+      <div class="modal-form">
+        <h3>🔐 Enter password to delete image</h3>
+        <input type="password" v-model="deletePassword" placeholder="Enter password" />
+        <div class="modal-buttons">
+          <button @click="confirmDelete">Confirm</button>
+          <button @click="showDeleteModal = false" class="cancel">Cancel</button>
+        </div>
+        <p v-if="deleteError" style="color:red">{{ deleteError }}</p>
       </div>
     </div>
   </div>
@@ -69,6 +82,11 @@ const author = ref('')
 const adminPassword = ref('')
 const uploadStatus = ref('')
 
+const showDeleteModal = ref(false)
+const selectedDeleteId = ref(null)
+const deletePassword = ref('')
+const deleteError = ref('')
+
 const fetchImages = async () => {
   images.value = []
   try {
@@ -88,14 +106,10 @@ const uploadImage = async () => {
   formData.append('image', selectedFile.value)
   formData.append('alt', altText.value)
   formData.append('author', author.value)
+  formData.append('password', adminPassword.value)
 
   try {
-    await axios.post(`${import.meta.env.VITE_API_URL}/api/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        Authorization: adminPassword.value
-      }
-    })
+    await axios.post(`${import.meta.env.VITE_API_URL}/api/upload`, formData)
     uploadStatus.value = '✅ Upload successful!'
     selectedFile.value = null
     altText.value = ''
@@ -109,18 +123,22 @@ const uploadImage = async () => {
   }
 }
 
-const deleteImage = async (id) => {
-  if (!adminPassword.value) {
-    alert('Please enter admin password first.')
-    return
-  }
+const openDeleteModal = (id) => {
+  selectedDeleteId.value = id
+  deletePassword.value = ''
+  deleteError.value = ''
+  showDeleteModal.value = true
+}
+
+const confirmDelete = async () => {
   try {
-    await axios.delete(`${import.meta.env.VITE_API_URL}/api/gallery/${id}`, {
-      headers: { Authorization: adminPassword.value }
+    await axios.delete(`${import.meta.env.VITE_API_URL}/api/gallery/${selectedDeleteId.value}`, {
+      headers: { Authorization: deletePassword.value }
     })
+    showDeleteModal.value = false
     fetchImages()
   } catch (err) {
-    alert('❌ Delete failed')
+    deleteError.value = '❌ Wrong password or failed to delete.'
   }
 }
 

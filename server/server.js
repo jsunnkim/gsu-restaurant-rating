@@ -22,6 +22,7 @@ app.use(cors({
   credentials: true
 }))
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 // === MongoDB 연결 ===
 mongoose.connect(process.env.MONGO_URI)
@@ -56,7 +57,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
       src: req.file.path,
       alt: req.body.alt,
       author: req.body.author,
-      password: req.headers.authorization  // 사용자가 설정한 비밀번호 저장
+      password: req.body.password || req.headers.authorization  // 사용자가 설정한 비밀번호 저장
     })
     await newImage.save()
     res.status(201).json(newImage)
