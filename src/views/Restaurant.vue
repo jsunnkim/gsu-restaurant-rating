@@ -4,7 +4,7 @@
 
     <button @click="showForm = true" class="toggle-btn">Add Post</button>
 
-    <!-- 모달 작성 폼 -->
+    <!-- 작성 모달 -->
     <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
       <form @submit.prevent="submitPost" class="modal-form">
         <h3>📝 Write a Restaurant Review</h3>
@@ -14,6 +14,7 @@
         <input v-model="rating" type="number" min="0" max="5" step="0.1" placeholder="Rating" required />
         <textarea v-model="review" placeholder="Write your review..." required></textarea>
         <input v-model="author" placeholder="Author" required />
+        <input type="password" v-model="password" placeholder="Set a password to delete later" required />
 
         <div class="modal-buttons">
           <button type="submit">Post</button>
@@ -33,12 +34,12 @@
           <p>⭐ {{ post.rating }}</p>
           <p>{{ post.review }}</p>
           <p>👤 {{ post.author }}</p>
-          <button class="delete-button" @click="deletePost(post._id)">🗑️ Delete</button>
+          <button class="delete-button" @click="openDeleteModal(post._id)">🗑️ Delete</button>
         </div>
       </div>
     </div>
 
-    <!-- 상세보기 모달 -->
+    <!-- 상세 보기 모달 -->
     <div v-if="selectedPost" class="modal-overlay" @click.self="selectedPost = null">
       <div class="modal-form">
         <h3>{{ selectedPost.name }}</h3>
@@ -48,6 +49,19 @@
         <p>{{ selectedPost.review }}</p>
         <p>👤 {{ selectedPost.author }}</p>
         <button class="close-button" @click="selectedPost = null">닫기</button>
+      </div>
+    </div>
+
+    <!-- 삭제 비밀번호 모달 -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+      <div class="modal-form">
+        <h3>🔐 Enter password to delete post</h3>
+        <input type="password" v-model="deletePassword" placeholder="Enter password" />
+        <div class="modal-buttons">
+          <button @click="confirmDelete">Confirm</button>
+          <button @click="showDeleteModal = false" class="cancel">Cancel</button>
+        </div>
+        <p v-if="deleteError" style="color:red">{{ deleteError }}</p>
       </div>
     </div>
   </div>
@@ -63,10 +77,16 @@ const address = ref('')
 const rating = ref('')
 const review = ref('')
 const author = ref('')
+const password = ref('')
 const selectedFile = ref(null)
 const uploadStatus = ref('')
 const showForm = ref(false)
 const selectedPost = ref(null)
+
+const showDeleteModal = ref(false)
+const selectedDeleteId = ref(null)
+const deletePassword = ref('')
+const deleteError = ref('')
 
 const handleFile = (e) => {
   selectedFile.value = e.target.files[0]
@@ -80,10 +100,14 @@ const submitPost = async () => {
   formData.append('rating', rating.value)
   formData.append('review', review.value)
   formData.append('author', author.value)
+  formData.append('password', password.value)
 
   try {
     await axios.post(`${import.meta.env.VITE_API_URL}/api/post`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: password.value
+      }
     })
     uploadStatus.value = '✅ Post uploaded!'
     name.value = ''
@@ -91,6 +115,7 @@ const submitPost = async () => {
     rating.value = ''
     review.value = ''
     author.value = ''
+    password.value = ''
     selectedFile.value = null
     document.querySelector('input[type="file"]').value = ''
     showForm.value = false
@@ -110,22 +135,27 @@ const fetchPosts = async () => {
   }
 }
 
-const deletePost = async (id) => {
-  const password = prompt("Enter admin password:")
-  if (!password) return
-
-  try {
-    await axios.delete(`${import.meta.env.VITE_API_URL}/api/post/${id}`, {
-      headers: { Authorization: password }
-    })
-    fetchPosts()
-  } catch (err) {
-    alert('❌ Delete failed')
-  }
-}
-
 const openDetail = (post) => {
   selectedPost.value = post
+}
+
+const openDeleteModal = (id) => {
+  selectedDeleteId.value = id
+  deletePassword.value = ''
+  deleteError.value = ''
+  showDeleteModal.value = true
+}
+
+const confirmDelete = async () => {
+  try {
+    await axios.delete(`${import.meta.env.VITE_API_URL}/api/post/${selectedDeleteId.value}`, {
+      headers: { Authorization: deletePassword.value }
+    })
+    showDeleteModal.value = false
+    fetchPosts()
+  } catch (err) {
+    deleteError.value = '❌ Wrong password or failed to delete.'
+  }
 }
 
 onMounted(fetchPosts)
