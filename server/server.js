@@ -1,14 +1,15 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors' );
+const cors = require('cors');
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 // === Mongoose Models ===
 const Image = require('./models/Image');
-const Post = require('./models/Post'); // ✅ 새로 추가
+const Post = require('./models/Post');
+
 const RestaurantSchema = new mongoose.Schema({
   name: String,
   address: String,
@@ -20,11 +21,18 @@ const Restaurant = mongoose.model('Restaurant', RestaurantSchema);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// === Middleware ===
-app.use(cors());
+// === CORS 설정 ===
+const corsOptions = {
+  origin: 'https://gsu-restaurant-rating.vercel.app', // ✅ 프론트엔드 주소 명시
+  methods: ['GET', 'POST', 'DELETE'],
+  credentials: true
+};
+app.use(cors(corsOptions));
+
+// === 미들웨어 ===
 app.use(express.json());
 
-// === MongoDB Connection ===
+// === MongoDB 연결 ===
 async function connectDB() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
@@ -36,7 +44,7 @@ async function connectDB() {
 }
 connectDB();
 
-// === Cloudinary Setup ===
+// === Cloudinary 설정 ===
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -52,14 +60,12 @@ const storage = new CloudinaryStorage({
 });
 const upload = multer({ storage });
 
-// === Routes ===
-
-// Health Check
+// === 기본 라우트 ===
 app.get('/', (req, res) => {
   res.send('🚀 GSU Restaurant Rating Backend is running!');
 });
 
-// Upload Image
+// === Image 업로드 라우트 ===
 app.post('/api/upload', upload.single('image'), async (req, res) => {
   try {
     const newImage = new Image({
@@ -74,7 +80,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
   }
 });
 
-// Fetch Gallery
+// === Gallery 이미지 리스트 ===
 app.get('/api/gallery', async (req, res) => {
   try {
     const images = await Image.find();
@@ -85,7 +91,7 @@ app.get('/api/gallery', async (req, res) => {
   }
 });
 
-// Delete Image
+// === 이미지 삭제 ===
 app.delete('/api/gallery/:id', async (req, res) => {
   try {
     const image = await Image.findById(req.params.id);
@@ -101,7 +107,7 @@ app.delete('/api/gallery/:id', async (req, res) => {
   }
 });
 
-// Submit Restaurant
+// === 기존 Restaurant 등록 라우트 ===
 app.post('/api/restaurant', async (req, res) => {
   try {
     const { name, address, rating, review } = req.body;
@@ -114,7 +120,7 @@ app.post('/api/restaurant', async (req, res) => {
   }
 });
 
-// ✅ Restaurant Post - Upload
+// === ✅ 새로운 Restaurant 포스트 (사진 + 글) 업로드 라우트 ===
 app.post('/api/post', upload.single('image'), async (req, res) => {
   try {
     const { name, address, rating, review } = req.body;
@@ -139,17 +145,18 @@ app.post('/api/post', upload.single('image'), async (req, res) => {
   }
 });
 
-// ✅ Restaurant Post - List
+// === ✅ Restaurant 포스트 불러오기 라우트 ===
 app.get('/api/post', async (req, res) => {
   try {
     const posts = await Post.find().sort({ createdAt: -1 });
     res.json(posts);
   } catch (err) {
+    console.error('❌ Error loading posts:', err);
     res.status(500).json({ message: 'Error loading posts' });
   }
 });
 
-// Start Server
+// === 서버 시작 ===
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
