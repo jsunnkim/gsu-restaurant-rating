@@ -1,9 +1,10 @@
 <template>
   <div class="page gallery">
-    <h2>📸 Restaurant Gallery</h2>
+    <h2>Gallery</h2>
 
-    <button @click="showForm = true" class="toggle-btn">➕ Add Image</button>
+    <button @click="showForm = true" class="toggle-btn">Add Image</button>
 
+    <!-- 업로드 모달 -->
     <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
       <form @submit.prevent="uploadImage" class="modal-form">
         <h3>📤 Upload New Image</h3>
@@ -19,10 +20,10 @@
       </form>
     </div>
 
+    <!-- 이미지 목록 -->
     <div v-if="images.length === 0">
       <p class="empty-message">No images yet. Be the first to upload!</p>
     </div>
-
     <div v-else class="gallery-grid">
       <div
         v-for="image in images"
@@ -43,6 +44,7 @@
       </div>
     </div>
 
+    <!-- 이미지 확대 모달 -->
     <div v-if="modalOpen" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <img :src="selectedImageSrc" :alt="selectedImageAlt" class="modal-img" />
@@ -51,7 +53,7 @@
       </div>
     </div>
 
-    <!-- 삭제 모달 -->
+    <!-- 삭제 비밀번호 모달 -->
     <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
       <div class="modal-form">
         <h3>🔐 Enter password to delete image</h3>
@@ -88,7 +90,6 @@ const deletePassword = ref('')
 const deleteError = ref('')
 
 const fetchImages = async () => {
-  images.value = []
   try {
     const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/gallery`)
     images.value = res.data
@@ -109,7 +110,12 @@ const uploadImage = async () => {
   formData.append('password', adminPassword.value)
 
   try {
-    await axios.post(`${import.meta.env.VITE_API_URL}/api/upload`, formData)
+    await axios.post(`${import.meta.env.VITE_API_URL}/api/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: adminPassword.value  // 🔐 서버가 저장 가능하게
+      }
+    })
     uploadStatus.value = '✅ Upload successful!'
     selectedFile.value = null
     altText.value = ''
