@@ -37,7 +37,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'gsu_gallery',
-    allowed_formats: ['jpg', 'jpeg', 'png' , 'webp']
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
   }
 })
 const upload = multer({ storage })
