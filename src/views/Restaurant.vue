@@ -48,7 +48,7 @@
         <p>⭐ {{ selectedPost.rating }}</p>
         <p>{{ selectedPost.review }}</p>
         <p>👤 {{ selectedPost.author }}</p>
-        <button class="close-button" @click="selectedPost = null">닫기</button>
+        <button class="close-button" @click="selectedPost = null">Close</button>
       </div>
     </div>
 

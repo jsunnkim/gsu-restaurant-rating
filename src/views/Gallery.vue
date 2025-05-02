@@ -49,7 +49,7 @@
       <div class="modal-content" @click.stop>
         <img :src="selectedImageSrc" :alt="selectedImageAlt" class="modal-img" />
         <p class="caption">{{ selectedImageAlt }}</p>
-        <button class="close-button" @click="closeModal">닫기</button>
+        <button class="close-button" @click="closeModal">Close</button>
       </div>
     </div>
 
